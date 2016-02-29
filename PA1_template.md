@@ -21,7 +21,8 @@ Here I've calculted the total number of steps taken each day and visualized the 
 
 ```r
 library(dplyr)
-stepsPerDay <- summarize(group_by(activity, date), steps = sum(steps, na.rm = TRUE))
+activity_naomit <- na.omit(activity)
+stepsPerDay <- summarize(group_by(activity_naomit, date), steps = sum(steps, na.rm = TRUE))
 
 library(ggplot2)
 h <- ggplot(stepsPerDay, aes(steps))
@@ -40,8 +41,8 @@ data.frame(Value = c(round(mean(stepsPerDay$steps), digits = 2),
 
 ```
 ##           Value
-## Mean    9354.23
-## Median 10395.00
+## Mean   10766.19
+## Median 10765.00
 ```
 
 ## What is the average daily activity pattern?
@@ -50,7 +51,7 @@ Next I've calculated the average number of steps taken during each 5-minute inte
 
 
 ```r
-byInterval <- summarize(group_by(activity, interval), steps = mean(steps, na.rm = TRUE))
+byInterval <- summarize(group_by(activity_naomit, interval), steps = mean(steps, na.rm = TRUE))
 i <- ggplot(byInterval, aes(interval, steps))
 i + geom_line()
 ```
@@ -96,12 +97,12 @@ for(i in 1:nrow(activity2)) {
 }
 ```
 
-For the new dataset with missing values filled in I've also calculated the total number of steps per day, created a histogram and compared it with the histogram of the original data. As you can see, in the new data there are less days with a total step count of zero, and more days with a total step count of 10,000 to 12,000.
+For the new dataset with missing values filled in I've also calculated the total number of steps per day, created a histogram and compared it with the histogram of the original data. As you can see, in the new data there are more days with a total step count of 10,000 to 12,000.
 
 
 ```r
-steps2 <- cbind(summarize(group_by(activity2, date), steps = sum(steps, na.rm = TRUE)), ver = rep("NAs removed"))
-stepsPerDay2 <- cbind(stepsPerDay, ver = rep("Original data"))
+steps2 <- cbind(summarize(group_by(activity2, date), steps = sum(steps, na.rm = TRUE)), ver = rep("NAs imputed"))
+stepsPerDay2 <- cbind(stepsPerDay, ver = rep("NAs removed"))
 stepsPerDay2 <- rbind(stepsPerDay2, steps2)
 h2 <- ggplot(stepsPerDay2, aes(steps))
 h2 + geom_histogram(col = "blue", fill = "skyblue") + facet_grid(. ~ ver)
@@ -109,21 +110,21 @@ h2 + geom_histogram(col = "blue", fill = "skyblue") + facet_grid(. ~ ver)
 
 ![](PA1_template_files/figure-html/unnamed-chunk-8-1.png) 
 
-Filling in the missing values has raised the mean number of steps taken per day from ``9354.23`` to ``10766.19``. The median and mean in the new data are equal.
+Filling in the missing values has raised the median number of steps taken per day from ``10765`` to ``10766.19``, which is equal to the mean. The mean remains unchanged.
 
 
 ```r
-data.frame(OriginalData = c(round(mean(filter(stepsPerDay2, ver == "Original data")$steps), digits = 2), 
-                            round(median(filter(stepsPerDay2, ver == "Original data")$steps), digits = 2)), 
-                            NAsRemoved = c(round(mean(filter(stepsPerDay2, ver == "NAs removed")$steps), 
-                            digits = 2), round(median(filter(stepsPerDay2, ver == "NAs removed")$steps), 
+data.frame(OriginalData = c(round(mean(filter(stepsPerDay2, ver == "NAs removed")$steps), digits = 2), 
+                            round(median(filter(stepsPerDay2, ver == "NAs removed")$steps), digits = 2)), 
+                            NAsRemoved = c(round(mean(filter(stepsPerDay2, ver == "NAs imputed")$steps), 
+                            digits = 2), round(median(filter(stepsPerDay2, ver == "NAs imputed")$steps), 
                             digits = 2)), row.names = c("Mean", "Median"))
 ```
 
 ```
 ##        OriginalData NAsRemoved
-## Mean        9354.23   10766.19
-## Median     10395.00   10766.19
+## Mean       10766.19   10766.19
+## Median     10765.00   10766.19
 ```
 
 ## Are there differences in activity patterns between weekdays and weekends?
@@ -133,18 +134,19 @@ To address the question if there is a difference in activity between weekdays an
 
 ```r
 library(lubridate)
-activity <- mutate(activity, weekday = weekdays(ymd(activity$date)))
-activity$weekday <- sub("Montag|Dienstag|Mittwoch|Donnerstag|Freitag", "weekday", activity$weekday)
-activity$weekday <- sub("Samstag|Sonntag", "weekend", activity$weekday)
-activity$weekday <- as.factor(activity$weekday)
+activity_naomit <- mutate(activity_naomit, weekday = weekdays(ymd(activity_naomit$date)))
+activity_naomit$weekday <- sub("Montag|Dienstag|Mittwoch|Donnerstag|Freitag", "weekday", activity_naomit$weekday)
+activity_naomit$weekday <- sub("Samstag|Sonntag", "weekend", activity_naomit$weekday)
+activity_naomit$weekday <- as.factor(activity_naomit$weekday)
 ```
 
 I've created time series plots to visualize the difference in activity pattern between weekdays and weekend days. For this I've used the original data without the NAs filled in. The activity patterns for the data with the NAs filled in does not look significantly different and I've included them in the appendix.
 
 
 ```r
-activity <- group_by(activity, interval, weekday)
-byWeekday <- summarize(activity, avg_steps = mean(steps, na.rm = TRUE))
+activit_naomit <- na.omit(activity)
+activity_naomit <- group_by(activity_naomit, interval, weekday)
+byWeekday <- summarize(activity_naomit, avg_steps = mean(steps, na.rm = TRUE))
 
 w <- ggplot(byWeekday, aes(interval, avg_steps))
 w + geom_line() + facet_grid(weekday ~ .)
@@ -159,6 +161,11 @@ Although there is a spike in activity between interval 750 and interval 1000 for
 Activity patterns for the data with NAs filled in:
 
 ```r
+activity2 <- mutate(activity2, weekday = weekdays(ymd(activity2$date)))
+activity2$weekday <- sub("Montag|Dienstag|Mittwoch|Donnerstag|Freitag", "weekday", activity2$weekday)
+activity2$weekday <- sub("Samstag|Sonntag", "weekend", activity2$weekday)
+activity2$weekday <- as.factor(activity2$weekday)
+
 activity2 <- mutate(activity2, weekday = weekdays(ymd(activity2$date)))
 activity2$weekday <- sub("Montag|Dienstag|Mittwoch|Donnerstag|Freitag", "weekday", activity2$weekday)
 activity2$weekday <- sub("Samstag|Sonntag", "weekend", activity2$weekday)
